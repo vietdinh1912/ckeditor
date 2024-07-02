@@ -1,3 +1,7 @@
+importScripts('https://cdn.socket.io/4.0.0/socket.io.min.js');
+
+let socket;
+
 self.onmessage = function(event) {
   const { action, payload } = event.data;
 
@@ -16,40 +20,38 @@ self.onmessage = function(event) {
   }
 };
 
-let socket;
-
 function initSocket(url) {
-  socket = new WebSocket(url);
+  socket = io(url);
 
-  socket.onopen = function() {
-    console.log('WebSocket connection established');
-  };
+  socket.on('connect', () => {
+    console.log('Socket.IO connection established');
+  });
 
-  socket.onmessage = function(event) {
-    const data = JSON.parse(event.data);
+  socket.on('stock-update', (data) => {
     self.postMessage({ action: 'UPDATE_STOCKS', data });
-  };
+  });
 
-  socket.onclose = function() {
-    console.log('WebSocket connection closed');
-  };
+  socket.on('disconnect', () => {
+    console.log('Socket.IO connection closed');
+  });
 
-  socket.onerror = function(error) {
-    console.error('WebSocket error:', error);
-  };
+  socket.on('connect_error', (error) => {
+    console.error('Socket.IO connection error:', error);
+  });
 }
 
 function sendMessage(message) {
-  if (socket && socket.readyState === WebSocket.OPEN) {
-    socket.send(JSON.stringify(message));
+  if (socket && socket.connected) {
+    socket.emit('message', message);
   }
 }
 
 function closeSocket() {
   if (socket) {
-    socket.close();
+    socket.disconnect();
   }
 }
+
 -----------------------------------------
 import React, { useEffect, useRef, useState } from 'react';
 
