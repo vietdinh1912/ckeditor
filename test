@@ -1,0 +1,118 @@
+self.onmessage = function(event) {
+  const { action, payload } = event.data;
+
+  switch (action) {
+    case 'INIT_SOCKET':
+      initSocket(payload);
+      break;
+    case 'SEND_MESSAGE':
+      sendMessage(payload);
+      break;
+    case 'CLOSE_SOCKET':
+      closeSocket();
+      break;
+    default:
+      console.error('Unknown action:', action);
+  }
+};
+
+let socket;
+
+function initSocket(url) {
+  socket = new WebSocket(url);
+
+  socket.onopen = function() {
+    console.log('WebSocket connection established');
+  };
+
+  socket.onmessage = function(event) {
+    const data = JSON.parse(event.data);
+    self.postMessage({ action: 'UPDATE_STOCKS', data });
+  };
+
+  socket.onclose = function() {
+    console.log('WebSocket connection closed');
+  };
+
+  socket.onerror = function(error) {
+    console.error('WebSocket error:', error);
+  };
+}
+
+function sendMessage(message) {
+  if (socket && socket.readyState === WebSocket.OPEN) {
+    socket.send(JSON.stringify(message));
+  }
+}
+
+function closeSocket() {
+  if (socket) {
+    socket.close();
+  }
+}
+-----------------------------------------
+import React, { useEffect, useRef, useState } from 'react';
+
+const StockTable = () => {
+  const [stocks, setStocks] = useState([]);
+  const workerRef = useRef(null);
+
+  useEffect(() => {
+    workerRef.current = new Worker(new URL('./socketWorker.js', import.meta.url));
+
+    workerRef.current.onmessage = (event) => {
+      const { action, data } = event.data;
+
+      switch (action) {
+        case 'UPDATE_STOCKS':
+          setStocks(data);
+          break;
+        default:
+          console.error('Unknown action:', action);
+      }
+    };
+
+    workerRef.current.postMessage({ action: 'INIT_SOCKET', payload: 'http://localhost:3000' });
+
+    return () => {
+      workerRef.current.postMessage({ action: 'CLOSE_SOCKET' });
+      workerRef.current.terminate();
+    };
+  }, []);
+
+  return (
+    <table>
+      <thead>
+        <tr>
+          <th>Symbol</th>
+          <th>Price</th>
+          <th>Change</th>
+        </tr>
+      </thead>
+      <tbody>
+        {stocks.map(stock => (
+          <tr key={stock.symbol}>
+            <td>{stock.symbol}</td>
+            <td>{stock.price}</td>
+            <td>{stock.change}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+};
+
+export default StockTable;
+---------------------------------------
+module.exports = {
+  // Các cấu hình khác...
+  module: {
+    rules: [
+      {
+        test: /\.worker\.js$/,
+        use: { loader: 'worker-loader' },
+      },
+      // Các rule khác...
+    ],
+  },
+};
