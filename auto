@@ -1,0 +1,24 @@
+const puppeteer = require('puppeteer');
+
+(async () => {
+  const browser = await puppeteer.launch({
+    headless: false, // Cho phép bạn thấy trình duyệt chạy
+    defaultViewport: null,
+  });
+
+  const page = await browser.newPage();
+
+  // Truy cập vào trang web
+  await page.goto('https://example.com');
+
+  // Đợi phần tử cần click xuất hiện (thay bằng selector thật của bạn)
+  await page.waitForSelector('button#clickMe'); // ví dụ: nút có id="clickMe"
+
+  // Click vào phần tử
+  await page.click('button#clickMe');
+
+  // Hoặc nếu bạn muốn delay sau khi click
+  await page.waitForTimeout(3000); // đợi 3 giây
+
+  await browser.close();
+})();
